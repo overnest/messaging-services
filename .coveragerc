@@ -1,0 +1,3 @@
+[run]
+source = messaging_service
+omit = messaging_service/test*

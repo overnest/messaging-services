@@ -1,4 +1,6 @@
+from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
+from pyramid.renderers import JSON
 
 
 def main(global_config, **settings):
@@ -8,5 +10,11 @@ def main(global_config, **settings):
     config.include('pyramid_jinja2')
     config.include('.models')
     config.include('.routes')
+    config.add_renderer('json', JSON(indent=2))
+
+    config.set_authorization_policy(ACLAuthorizationPolicy())
+    config.include('pyramid_jwt')
+    config.set_jwt_authentication_policy('secret')
+
     config.scan()
     return config.make_wsgi_app()
