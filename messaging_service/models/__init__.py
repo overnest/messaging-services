@@ -7,6 +7,7 @@ import zope.sqlalchemy
 # Base.metadata prior to any initialization routines
 from .friend import Friend
 from .message import Message
+from .upload import Upload
 from .user import User
 
 # run configure_mappers after defining all of the models to ensure

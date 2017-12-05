@@ -17,7 +17,7 @@ class Message(Base):
     from_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     to_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     message_type = Column(Text, nullable=False)
-    content = Column(Text, nullable=False)
+    content = Column(Text)
     read = Column(Boolean(name="ck_message_read"), nullable=False, default=False)
     sent = Column(TIMESTAMP)
 

@@ -3,6 +3,8 @@ import transaction
 
 from pyramid import testing
 
+from .tus import parse_metadata, InvalidUploadMetadata
+
 
 def dummy_request(dbsession):
     return testing.DummyRequest(dbsession=dbsession)
@@ -20,7 +22,7 @@ class BaseTest(unittest.TestCase):
             get_engine,
             get_session_factory,
             get_tm_session,
-            )
+        )
 
         self.engine = get_engine(settings)
         session_factory = get_session_factory(self.engine)
@@ -37,3 +39,28 @@ class BaseTest(unittest.TestCase):
         testing.tearDown()
         transaction.abort()
         Base.metadata.drop_all(self.engine)
+
+
+class TusTest(unittest.TestCase):
+    def test_metadata_parsed_successfully(self):
+        headers = {'Upload-Metadata': "to bmluamE="}
+        result = parse_metadata(headers)
+        self.assertTrue(len(result) == 1)
+        self.assertEqual(result['to'], "ninja")
+
+    def test_empty_metadata_is_fine(self):
+        headers = {'Upload-Metadata': ""}
+        result = parse_metadata(headers)
+        self.assertTrue(len(result) == 0)
+
+    def test_wrong_length_of_pair_raises_error(self):
+        headers = {'Upload-Metadata': "to bmluamE= blah"}
+
+        with self.assertRaisesRegex(InvalidUploadMetadata, "key-value pairs"):
+            parse_metadata(headers)
+
+    def test_base64_issues_raise_error(self):
+        headers = {'Upload-Metadata': "to ninja"}
+
+        with self.assertRaisesRegex(InvalidUploadMetadata, "Base64"):
+            parse_metadata(headers)
