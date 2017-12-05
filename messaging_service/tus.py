@@ -3,6 +3,8 @@
 """
 from base64 import b64decode
 
+from pyramid.response import Response
+
 
 class InvalidUploadMetadata(ValueError):
     def __init__(self, message):
@@ -37,3 +39,13 @@ def parse_metadata(headers):
             raise InvalidUploadMetadata("Are values provided in Base64?")
 
     return parsed_metadata
+
+
+def tus_response(status, **kwargs):
+    headers = {'Tus-Resumable': "1.0.0"}
+
+    for key, value in kwargs.items():
+        key = '-'.join(map(str.capitalize, key.split('_')))
+        headers[key] = str(value)
+
+    return Response(status=status, headers=headers)

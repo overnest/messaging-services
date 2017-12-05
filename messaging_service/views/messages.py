@@ -11,7 +11,7 @@ from ..models import (
     Upload,
     User,
 )
-from ..tus import parse_metadata
+from ..tus import parse_metadata, tus_response
 
 
 def _verify_target_is_friend(request, to_username):
@@ -40,6 +40,11 @@ def _verify_target_is_friend(request, to_username):
 
 @view_config(route_name='create_video_message', request_method='POST')
 def create_video_message(request):
+    """This endpoint implements the Tus creation service. A POST request
+    creates a Message object as well as an Upload object and returns a Location
+    to which additional PATCH requests may be sent in order to actually upload
+    the file.
+    """
     parsed_metadata = parse_metadata(request.headers)
 
     try:
@@ -47,7 +52,10 @@ def create_video_message(request):
     except:
         raise ValueError("Invalid or missing Upload-Length header.")
 
-    current_user_id, friend = _verify_target_is_friend(request, parsed_metadata['to'])
+    current_user_id, friend = _verify_target_is_friend(
+        request,
+        parsed_metadata['to']
+    )
 
     message = Message(
         from_id=current_user_id,
@@ -64,13 +72,9 @@ def create_video_message(request):
     request.dbsession.add(upload)
     request.dbsession.flush()
 
-    return Response(
-        status=201,
-        headers={
-            'Location': request.route_url('append_to_upload', upload_id=upload.id),
-            'Tus-Resumable': "1.0.0",
-        },
-    )
+    location_url = request.route_url('append_to_upload', upload_id=upload.id)
+
+    return tus_response(201, location=location_url)
 
 
 @view_config(route_name='append_to_upload', request_method='HEAD')
@@ -78,12 +82,7 @@ def find_upload_offset(request):
     upload_id = int(request.matchdict['upload_id'])
     upload = request.dbsession.query(Upload).get(upload_id)
 
-    return Response(
-        headers={
-            'Upload-Offset': str(upload.uploaded_size),
-            'Tus-Resumable': "1.0.0",
-        },
-    )
+    return tus_response(200, upload_offset=upload.uploaded_size)
 
 
 @view_config(route_name='append_to_upload', request_method='PATCH')
@@ -113,13 +112,7 @@ def append_to_upload(request):
 
     request.dbsession.add(upload)
 
-    return Response(
-        status=204,
-        headers={
-            'Tus-Resumable': "1.0.0",
-            'Upload-Offset': str(upload.uploaded_size)
-        }
-    )
+    return tus_response(204, upload_offset=upload.uploaded_size)
 
 
 @view_config(route_name='send_text_message', request_method='POST')
