@@ -48,6 +48,13 @@ class TusTest(unittest.TestCase):
         self.assertTrue(len(result) == 1)
         self.assertEqual(result['to'], "ninja")
 
+    def test_multiple_valid_keys_parsed(self):
+        headers = {'Upload-Metadata': "to bmluamE=,foo YmFy"}
+        result = parse_metadata(headers)
+        self.assertTrue(len(result) == 2)
+        self.assertEqual(result['to'], "ninja")
+        self.assertEqual(result['foo'], "bar")
+
     def test_empty_metadata_is_fine(self):
         headers = {'Upload-Metadata': ""}
         result = parse_metadata(headers)
@@ -57,6 +64,12 @@ class TusTest(unittest.TestCase):
         headers = {'Upload-Metadata': "to bmluamE= blah"}
 
         with self.assertRaisesRegex(InvalidUploadMetadata, "key-value pairs"):
+            parse_metadata(headers)
+
+    def test_duplicate_keys_raises_error(self):
+        headers = {'Upload-Metadata': "to bmluamE=,to ymxhaA==,foo YmFy"}
+
+        with self.assertRaisesRegex(InvalidUploadMetadata, "unique"):
             parse_metadata(headers)
 
     def test_base64_issues_raise_error(self):

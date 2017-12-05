@@ -1,3 +1,6 @@
+"""This module contains utility code that helps with the implementation of the
+`Tus protocol <https://tus.io>`_.
+"""
 from base64 import b64decode
 
 
@@ -8,9 +11,10 @@ class InvalidUploadMetadata(ValueError):
 
 
 def parse_metadata(headers):
+    """Upload-Metadata is provided as part of the Creation extension to Tus. It
+    is used to provide information about the upload object to the application.
+    """
     raw_metadata = headers.get('Upload-Metadata', '').strip()
-
-    # MUST be unique -- check
 
     if len(raw_metadata) == 0:
         return {}
@@ -22,6 +26,9 @@ def parse_metadata(headers):
             key, raw_value = pair.split(" ")
         except ValueError:
             raise InvalidUploadMetadata("Is it a list of key-value pairs?")
+
+        if key in parsed_metadata:
+            raise InvalidUploadMetadata("All keys must be unique.")
 
         try:
             value = b64decode(raw_value).decode('utf-8')
