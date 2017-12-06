@@ -1,7 +1,10 @@
 """
 This model is intended to handle large uploads.
 """
+import os.path
+import shutil
 
+import boto3
 from sqlalchemy import (
     Boolean,
     Column,
@@ -33,8 +36,51 @@ class Upload(Base):
     #    default=False,
     #)
 
-    message = relationship(
-        "Message",
-        backref="upload",
-        foreign_keys="Upload.message_id"
-    )
+    message = relationship("Message", back_populates="upload")
+
+    def partial_filename(self, request):
+        return os.path.join(
+            request.registry.settings['uploads.temporary_directory'],
+            "partial-upload.{upload_id}".format(upload_id=self.id),
+        )
+
+    def permanent_filename(self):
+        return "message-{message_id}-{message_type}".format(
+            message_id=self.message.id,
+            message_type=self.message.message_type,
+        )
+
+    def link(self, request):
+        if not self.complete:
+            return None
+
+        permanent_path = os.path.join(
+            request.registry.settings['uploads.permanent_directory'],
+            self.permanent_filename(),
+        )
+
+        return request.static_url("messaging_service:static/uploads/{}".format(self.permanent_filename()))
+
+
+    def copy_to_permanent_location(self, request):
+        settings = request.registry.settings
+
+        # TODO: Integrate with S3
+        if settings.get('uploads.s3.enabled'):
+            return self._upload_to_s3(request)
+
+        permanent_filename = os.path.join(
+            settings['uploads.permanent_directory'],
+            self.permanent_filename(),
+        )
+
+        with open(self.partial_filename(request), 'rb') as temporary_file:
+            with open(permanent_filename, 'wb') as permanent_file:
+                shutil.copyfileobj(temporary_file, permanent_file)
+
+    def _upload_to_s3(self, request):
+        bucket = request.registry.settings['uploads.s3.bucket']
+        s3 = boto3.resource('s3')
+
+        with open(self.partial_filename(request), 'rb') as data:
+            s3.Bucket(bucket).put_object(Key=self.permanent_filename, Body=data)

@@ -1,4 +1,4 @@
-import os.path
+import os
 import shutil
 
 from pyramid.response import Response
@@ -72,12 +72,17 @@ def create_video_message(request):
     request.dbsession.add(upload)
     request.dbsession.flush()
 
-    location_url = request.route_url('append_to_upload', upload_id=upload.id)
+    location_url = request.route_url('video_upload', upload_id=upload.id)
 
     return tus_response(201, location=location_url)
 
 
-@view_config(route_name='append_to_upload', request_method='HEAD')
+@view_config(route_name='create_video_message', request_method='OPTIONS')
+def video_message_options(request):
+    return tus_response(204, tus_version='1.0.0', tus_extension='creation')
+
+
+@view_config(route_name='video_upload', request_method='HEAD')
 def find_upload_offset(request):
     upload_id = int(request.matchdict['upload_id'])
     upload = request.dbsession.query(Upload).get(upload_id)
@@ -85,9 +90,8 @@ def find_upload_offset(request):
     return tus_response(200, upload_offset=upload.uploaded_size)
 
 
-@view_config(route_name='append_to_upload', request_method='PATCH')
+@view_config(route_name='video_upload', request_method='PATCH')
 def append_to_upload(request):
-    additional_size = int(request.headers['Content-Length'])
     offset_position = int(request.headers['Upload-Offset'])
     upload_id = int(request.matchdict['upload_id'])
 
@@ -96,10 +100,7 @@ def append_to_upload(request):
     if upload.uploaded_size != offset_position:
         return Response(status=409)
 
-    partial_filename = os.path.join(
-        request.registry.settings['uploads.temporary_directory'],
-        "partial-upload.{upload_id}".format(upload_id=upload.id),
-    )
+    partial_filename = upload.partial_filename(request)
 
     with open(partial_filename, 'ab') as partial_file:
         shutil.copyfileobj(request.body_file, partial_file)
@@ -109,6 +110,7 @@ def append_to_upload(request):
 
     if upload.uploaded_size >= upload.total_size:
         upload.complete = True
+        upload.copy_to_permanent_location(request)
 
     request.dbsession.add(upload)
 
