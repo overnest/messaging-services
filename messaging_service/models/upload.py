@@ -30,11 +30,11 @@ class Upload(Base):
         nullable=False,
         default=False,
     )
-    #available_on_s3 = Column(
-    #    Boolean(name="ck_available_on_s3"),
-    #    nullable=False,
-    #    default=False,
-    #)
+    available_on_s3 = Column(
+        Boolean(name="ck_available_on_s3"),
+        nullable=False,
+        default=False,
+    )
 
     message = relationship("Message", back_populates="upload")
 
@@ -60,7 +60,6 @@ class Upload(Base):
         )
 
         return request.static_url("messaging_service:static/uploads/{}".format(self.permanent_filename()))
-
 
     def copy_to_permanent_location(self, request):
         settings = request.registry.settings

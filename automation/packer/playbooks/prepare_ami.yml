@@ -1,0 +1,32 @@
+- hosts: all
+  vars:
+      install_dir: /tmp/install-files
+      service_user: ubuntu
+      service_home: /home/{{ service_user }}
+  tasks:
+      - name: Install Python/Pyramid prerequisites
+        apt:
+            name: "{{ item }}"
+            state: present
+        with_items:
+            - python3-venv
+      - name: Clone git repository
+        git:
+            repo: "https://{{ git_user | urlencode }}:{{ git_password | urlencode }}@github.com/overnest/messaging-services.git"
+            dest: "{{ service_home }}/messaging-services"
+        become: yes
+        become_user: ubuntu
+      - name: Create virtualenv
+        shell: /usr/bin/python3 -m venv {{ service_home }}/messaging-services/env
+        become: yes
+        become_user: ubuntu
+      - name: Upgrade pip within virtualenv and install requirements
+        args:
+            executable: /bin/bash
+        shell: |
+            source {{ service_home }}/messaging-services/env/bin/activate
+            pip install --upgrade pip
+            cd {{ service_home }}/messaging-services
+            pip install -e ".[testing]"
+        become: yes
+        become_user: ubuntu

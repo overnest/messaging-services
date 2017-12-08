@@ -21,3 +21,6 @@ coverage
 test
 *.sqlite
 .temp
+*.tfvars
+*.terraform
+*.tfstate*
