@@ -14,6 +14,7 @@ def users(request):
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
     user = User.from_json(request.json_body)
+    user.hash_password()
     request.dbsession.add(user)
 
     return Response(status=201)
@@ -24,7 +25,9 @@ def authorize_user(request):
     user = request.dbsession.query(User).filter(
         User.username == request.matchdict['username']).first()
 
-    # TODO: Password validation
+    if not user.verify_password(request.body):
+        return Response(status=401)
+
     token = request.create_jwt_token(user.id)
 
     return Response(

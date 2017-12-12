@@ -1,3 +1,4 @@
+from passlib.hash import pbkdf2_sha256
 from sqlalchemy import (
     Column,
     Integer,
@@ -15,7 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(Text)
     email = Column(Text)
-    password = Column(Text)  # TODO: Hash this.
+    password = Column(Text)
 
     initiated_friendships = relationship(
         "Friend",
@@ -31,13 +32,13 @@ class User(Base):
 
     sent_messages = relationship(
         "Message",
-        backref="from",
+        backref="from_user",
         foreign_keys=[Message.from_id],
     )
 
     received_messages = relationship(
         "Message",
-        backref="to",
+        backref="to_user",
         foreign_keys=[Message.to_id],
     )
 
@@ -47,6 +48,12 @@ class User(Base):
             'username': self.username,
             'email': self.email
         }
+
+    def hash_password(self):
+        self.password = pbkdf2_sha256.hash(self.password)
+
+    def verify_password(self, incoming_password):
+        return pbkdf2_sha256.verify(incoming_password, self.password)
 
     @classmethod
     def from_json(cls, json_user):

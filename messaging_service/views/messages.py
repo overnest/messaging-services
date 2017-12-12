@@ -5,6 +5,7 @@ from pyramid.response import Response
 from pyramid.view import view_config
 from sqlalchemy import and_, or_
 
+from ..authorization import validate_user
 from ..models import (
     Friend,
     Message,
@@ -15,7 +16,7 @@ from ..tus import parse_metadata, tus_response
 
 
 def _verify_target_is_friend(request, to_username):
-    from_id = request.jwt_claims['sub']
+    from_id = validate_user(request)
 
     friend = request.dbsession.query(User).join(
         Friend,
@@ -59,7 +60,7 @@ def create_video_message(request):
 
     message = Message(
         from_id=current_user_id,
-        to=friend,
+        to_user=friend,
         message_type='video',
     )
 
@@ -135,11 +136,18 @@ def send_text_message(request):
 
 @view_config(route_name='messages', request_method='GET', renderer='json')
 def messages(request):
-    current_user_id = request.jwt_claims['sub']
+    current_user_id = validate_user(request)
 
-    messages = request.dbsession.query(Message).filter(
+    text_messages = request.dbsession.query(Message).filter(
         Message.to_id == current_user_id,
-        Message.read == False,
-    ).all()
+        not Message.read,
+        Message.message_type == 'text',
+    ).join(Message.from_user).all()
 
-    return {"messages": messages}
+    video_messages = request.dbsession.query(Message).filter(
+        Message.to_id == current_user_id,
+        not Message.read,
+        Message.message_type == 'video',
+    ).join(Message.from_user).join(Upload).all()
+
+    return {"messages": text_messages + video_messages}

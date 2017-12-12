@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Text,
-    TIMESTAMP,
 )
 from sqlalchemy.orm import relationship
 
@@ -44,6 +43,7 @@ class Upload(Base):
             "partial-upload.{upload_id}".format(upload_id=self.id),
         )
 
+    @property
     def permanent_filename(self):
         return "message-{message_id}-{message_type}".format(
             message_id=self.message.id,
@@ -53,18 +53,36 @@ class Upload(Base):
     def link(self, request):
         if not self.complete:
             return None
+        elif not self.available_on_s3:
+            return request.static_url(
+                "messaging_service:static/uploads/{}".format(
+                    self.permanent_filename
+                )
+            )
 
-        permanent_path = os.path.join(
-            request.registry.settings['uploads.permanent_directory'],
-            self.permanent_filename(),
+        s3 = boto3.client('s3')
+        s3_location = self.s3_location(request)
+
+        return s3.generate_presigned_url(
+            'get_object',
+            Params=s3_location,
         )
 
-        return request.static_url("messaging_service:static/uploads/{}".format(self.permanent_filename()))
+    def s3_location(self, request):
+        bucket_name = "{environment_prefix}.{bucket_name}".format(
+            environment_prefix=request.registry.settings['environment_prefix'],
+            bucket_name=request.registry.settings['uploads.s3.bucket'],
+        )
+        object_name = self.partial_filename(request)
+
+        return {
+            'Bucket': bucket_name,
+            'Key': self.permanent_filename,
+        }
 
     def copy_to_permanent_location(self, request):
         settings = request.registry.settings
 
-        # TODO: Integrate with S3
         if settings.get('uploads.s3.enabled'):
             return self._upload_to_s3(request)
 
@@ -78,8 +96,14 @@ class Upload(Base):
                 shutil.copyfileobj(temporary_file, permanent_file)
 
     def _upload_to_s3(self, request):
-        bucket = request.registry.settings['uploads.s3.bucket']
         s3 = boto3.resource('s3')
+        s3_location = self.s3_location(request)
 
         with open(self.partial_filename(request), 'rb') as data:
-            s3.Bucket(bucket).put_object(Key=self.permanent_filename, Body=data)
+            s3.Bucket(s3_location['Bucket']).put_object(
+                Key=s3_location['Key'],
+                Body=data,
+            )
+
+        self.available_on_s3 = True
+        request.dbsession.add(self)

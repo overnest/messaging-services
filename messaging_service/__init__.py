@@ -14,7 +14,7 @@ def main(global_config, **settings):
 
     config.set_authorization_policy(ACLAuthorizationPolicy())
     config.include('pyramid_jwt')
-    config.set_jwt_authentication_policy('secret')
+    config.set_jwt_authentication_policy(settings['jwt.signature'])
 
     config.scan()
     return config.make_wsgi_app()

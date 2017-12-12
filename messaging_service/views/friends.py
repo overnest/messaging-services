@@ -2,13 +2,14 @@ from pyramid.response import Response
 from pyramid.view import view_config
 from sqlalchemy import and_, or_
 
+from ..authorization import validate_user
 from ..models import Friend
 from ..models import User
 
 
 @view_config(route_name='friends', request_method='GET', renderer='json')
 def friends(request):
-    current_user_id = request.jwt_claims['sub']
+    current_user_id = validate_user(request)
 
     confirmed_friends = request.dbsession.query(User).join(
         Friend,
@@ -57,7 +58,8 @@ def friends(request):
 
 @view_config(route_name='friends', request_method='POST')
 def create_friend(request):
-    initiator = request.dbsession.query(User).get(request.jwt_claims['sub'])
+    initiator = validate_user(request, query=True)
+
     target = request.dbsession.query(User).filter(
         User.username == request.json_body['username']).first()
 
@@ -70,13 +72,17 @@ def create_friend(request):
 @view_config(route_name='respond_to_friend_request', request_method='POST')
 def confirm_friend(request):
     friend_request = (
-        request.dbsession.query(Friend).join(User, User.id == Friend.initiator_id).filter(
+        request.dbsession.query(Friend).join(
+            User,
+            User.id == Friend.initiator_id,
+        ).filter(
             User.username == request.matchdict['username'],
-            Friend.target_id == int(request.jwt_claims['sub'])
+            Friend.target_id == validate_user(request)
         ).first()
     )
 
-    # TODO: Handle no friend request found
+    if friend_request is None:
+        return Response(status=404)
 
     friend_request.verified = True
     request.dbsession.add(friend_request)
@@ -87,9 +93,12 @@ def confirm_friend(request):
 @view_config(route_name='respond_to_friend_request', request_method='DELETE')
 def delete_friend(request):
     friend_request = (
-        request.dbsession.query(Friend).join(User, User.id == Friend.initiator_id).filter(
+        request.dbsession.query(Friend).join(
+            User,
+            User.id == Friend.initiator_id
+        ).filter(
             User.username == request.matchdict['username'],
-            Friend.target_id == int(request.jwt_claims['sub'])
+            Friend.target_id == validate_user(request)
         ).first()
     )
 
