@@ -125,7 +125,7 @@ def send_text_message(request):
     # Create message
     message = Message(
         from_id=current_user_id,
-        to=friend,
+        to_user=friend,
         message_type='text',
         content=request.json_body['content']
     )
@@ -140,13 +140,13 @@ def messages(request):
 
     text_messages = request.dbsession.query(Message).filter(
         Message.to_id == current_user_id,
-        not Message.read,
+        Message.read == False,
         Message.message_type == 'text',
     ).join(Message.from_user).all()
 
     video_messages = request.dbsession.query(Message).filter(
         Message.to_id == current_user_id,
-        not Message.read,
+        Message.read == False,
         Message.message_type == 'video',
     ).join(Message.from_user).join(Upload).all()
 

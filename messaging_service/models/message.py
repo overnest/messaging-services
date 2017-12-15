@@ -30,9 +30,11 @@ class Message(Base):
                 'type': "text",
                 'content': self.content,
                 'sent': self.sent,
+                'from': self.from_user.username,
             }
         elif self.message_type == 'video':
             return {
-                'type': "text",
+                'type': "video",
                 'contentLink': self.upload.link(request),
+                'from': self.from_user.username,
             }

@@ -1,0 +1,10 @@
+[Unit]
+Description=Overnest Messaging Service web services
+
+[Service]
+ExecStart=/home/ubuntu/messaging-services/env/bin/pserve {{ environment_name }}.ini
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target
