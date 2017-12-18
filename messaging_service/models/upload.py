@@ -5,6 +5,7 @@ import os.path
 import shutil
 
 import boto3
+from pyramid.settings import asbool
 from sqlalchemy import (
     Boolean,
     Column,
@@ -43,9 +44,9 @@ class Upload(Base):
             "partial-upload.{upload_id}".format(upload_id=self.id),
         )
 
-    @property
-    def permanent_filename(self):
-        return "message-{message_id}-{message_type}".format(
+    def permanent_filename(self, request):
+        return "{env_prefix}-message-{message_id}-{message_type}".format(
+            env_prefix=request.registry.settings['instance_prefix'],
             message_id=self.message.id,
             message_type=self.message.message_type,
         )
@@ -56,7 +57,7 @@ class Upload(Base):
         elif not self.available_on_s3:
             return request.static_url(
                 "messaging_service:static/uploads/{}".format(
-                    self.permanent_filename
+                    self.permanent_filename(request)
                 )
             )
 
@@ -73,22 +74,21 @@ class Upload(Base):
             environment_prefix=request.registry.settings['environment_prefix'],
             bucket_name=request.registry.settings['uploads.s3.bucket'],
         )
-        object_name = self.partial_filename(request)
-
+ 
         return {
             'Bucket': bucket_name,
-            'Key': self.permanent_filename,
+            'Key': self.permanent_filename(request),
         }
 
     def copy_to_permanent_location(self, request):
         settings = request.registry.settings
 
-        if settings.get('uploads.s3.enabled'):
+        if asbool(settings.get('uploads.s3.enabled')):
             return self._upload_to_s3(request)
 
         permanent_filename = os.path.join(
             settings['uploads.permanent_directory'],
-            self.permanent_filename(),
+            self.permanent_filename(request),
         )
 
         with open(self.partial_filename(request), 'rb') as temporary_file:

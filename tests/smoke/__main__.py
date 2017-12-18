@@ -10,6 +10,9 @@ TESTS = [
     message_tests.send_message,
     message_tests.retrieve_message,
     message_tests.create_video_upload,
+    message_tests.upload_full_file,
+    message_tests.retrieve_messages_including_video,
+    message_tests.download_video_content,
 ]
 
 for test in TESTS:

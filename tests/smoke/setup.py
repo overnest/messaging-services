@@ -27,11 +27,26 @@ class Context:
             self.state['users'][username]['token']
         )
 
-    def get(self, endpoint, *args, **kwargs):
-        return self.session.get(self.address + endpoint, *args, **kwargs)
+    def get(self, endp, *args, **kwargs):
+        return self.session.get(
+            endp if endp.startswith("http") else self.address + endp,
+            *args,
+            **kwargs
+        )
 
-    def post(self, endpoint, *args, **kwargs):
-        return self.session.post(self.address + endpoint, *args, **kwargs)
+    def patch(self, endp, *args, **kwargs):
+        return self.session.patch(
+            endp if endp.startswith("http") else self.address + endp,
+            *args,
+            **kwargs
+        )
+
+    def post(self, endp, *args, **kwargs):
+        return self.session.post(
+            endp if endp.startswith("http") else self.address + endp,
+            *args,
+            **kwargs
+        )
 
 
 context = Context()
