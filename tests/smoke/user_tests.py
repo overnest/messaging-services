@@ -10,16 +10,19 @@ def create_users(context):
             'username': "alfred",
             'email': "alf@example.com",
             'password': "foo",
+            'mobileNumber': "(704) 555 6161",
         },
         'betsy': {
             'username': "betsy",
             'email': "betsy@example.com",
             'password': "bar",
+            'mobileNumber': "693-555-2814",
         },
         'charles': {
             'username': "charles",
             'email': "charles@example.com",
             'password': "baz",
+            'mobileNumber': "1234567890",
         }
     }
 
@@ -27,6 +30,7 @@ def create_users(context):
         response = context.post('users', data=json.dumps(data))
         response.raise_for_status()
 
+# TODO: Tests for GET users
 
 @test(provides={'tokens'}, requires={'users'})
 def authorize_users(context):

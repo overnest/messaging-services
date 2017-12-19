@@ -17,6 +17,7 @@ class User(Base):
     username = Column(Text)
     email = Column(Text)
     password = Column(Text)
+    mobile_number = Column(Text)
 
     initiated_friendships = relationship(
         "Friend",
@@ -46,7 +47,8 @@ class User(Base):
         return {
             'id': self.id,
             'username': self.username,
-            'email': self.email
+            'email': self.email,
+            'mobileNumber': self.mobile_number,
         }
 
     def hash_password(self):
@@ -61,4 +63,7 @@ class User(Base):
             username=json_user['username'],
             email=json_user['email'],
             password=json_user['password'],
+            mobile_number=''.join(
+                c for c in json_user['mobileNumber'] if c in "0123456789"
+            ),
         )
