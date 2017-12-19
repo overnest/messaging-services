@@ -61,12 +61,14 @@ class Upload(Base):
                 )
             )
 
-        s3 = boto3.client('s3')
-        s3_location = self.s3_location(request)
+        s3 = boto3.client(
+            's3',
+            region_name=request.registry.settings.get('uploads.s3.region'),
+        )
 
         return s3.generate_presigned_url(
             'get_object',
-            Params=s3_location,
+            Params=self.s3_location(request),
         )
 
     def s3_location(self, request):
@@ -74,7 +76,7 @@ class Upload(Base):
             environment_prefix=request.registry.settings['environment_prefix'],
             bucket_name=request.registry.settings['uploads.s3.bucket'],
         )
- 
+
         return {
             'Bucket': bucket_name,
             'Key': self.permanent_filename(request),
