@@ -8,7 +8,7 @@ import zope.sqlalchemy
 from .friend import Friend
 from .message import Message
 from .upload import Upload
-from .user import User
+from .user import User, UserVerification
 
 # run configure_mappers after defining all of the models to ensure
 # all relationships can be setup

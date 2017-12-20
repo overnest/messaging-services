@@ -14,7 +14,7 @@ def validate_user(request, query=False):
 
     user = request.dbsession.query(User).get(user_id)
 
-    if user is None:
+    if user is None or not user.verified:
         raise HTTPUnauthorized
 
     return user
