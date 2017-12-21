@@ -1,9 +1,14 @@
 import json
 
+import pyramid.httpexceptions as phe
 from pyramid.response import Response
 from pyramid.view import view_config
 
 from ..models import User, UserVerification
+from messaging_service.models.errors import (
+    ExpiredVerificationCodeError,
+    catch_duplicate_object_errors,
+)
 
 
 @view_config(route_name='users', renderer='json')
@@ -17,12 +22,17 @@ def users(request):
 def create_user(request):
     user = User.from_json(request.json_body)
     user.hash_password()
-    request.dbsession.add(user)
 
     verification = UserVerification(user)
-    verification.send_code(request)
     verification.hash_code()
+
+    request.dbsession.add(user)
     request.dbsession.add(verification)
+
+    with catch_duplicate_object_errors('user'):
+        request.dbsession.flush()
+
+    verification.send_code(request)
 
     return Response(status=201)
 
@@ -51,28 +61,44 @@ def authorize_user(request):
         content_type="text/plain"
     )
 
+
 @view_config(route_name='verify_user', request_method='POST')
 def verify_user(request):
     user = request.dbsession.query(User).join(User.verifications).filter(
         User.username == request.matchdict['username']).first()
 
-    print(user)
-
     if user is None:
-        return Response(status=404)
+        raise phe.HTTPNotFound
 
-    valid = False
+    valid_verification = None
 
     for verification in user.verifications:
         if verification.verify_code(request.body):
-            valid = True
+            valid_verification = verification
 
-    # TODO handle expiration
+    if not valid_verification:
+        raise phe.HTTPForbidden
 
-    if not valid:
-        return Response(status=403)
+    if valid_verification.expired:
+        raise ExpiredVerificationCodeError(user.username)
 
     user.verified = True
     request.dbsession.add(user)
 
     return Response(status=204)
+
+
+@view_config(route_name='resend_verification_code', request_method='POST')
+def resend_verification_code(request):
+    user = request.dbsession.query(User).filter(
+        User.username == request.matchdict['username']).first()
+
+    verification = UserVerification(user)
+    verification.hash_code()
+
+    request.dbsession.add(verification)
+    request.dbsession.flush()
+
+    verification.send_code(request)
+
+    return Response(status=201)

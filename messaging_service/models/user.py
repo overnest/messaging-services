@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import SystemRandom
 
 import boto3
@@ -119,7 +119,21 @@ class UserVerification(Base):
         self.timestamp = datetime.now()
         self.code = str(SystemRandom().randint(100000, 999999))
 
+    @property
+    def expired(self):
+        current_time = datetime.now()
+        too_old = current_time - timedelta(hours=24)
+        return too_old >= self.timestamp
+
+    @property
+    def unhashed_code(self):
+        try:
+            return self._unhashed_code
+        except AttributeError:
+            return self.code
+
     def hash_code(self):
+        self._unhashed_code = self.code
         self.code = pbkdf2_sha256.hash(self.code)
 
     def verify_code(self, incoming_code):
@@ -130,7 +144,7 @@ class UserVerification(Base):
             client = boto3.client('sns', region_name='us-west-2')
             client.publish(
                 PhoneNumber="+1{}".format(self.user.mobile_number),
-                Message=self.code,
+                Message=self.unhashed_code,
             )
         else:
             print(self.code)
