@@ -23,7 +23,7 @@ from messaging_service.models.meta import Base
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-    username = Column(Text)
+    username = Column(Text, unique=True)
     email = Column(Text)
     password = Column(Text)
     mobile_number = Column(Text)
