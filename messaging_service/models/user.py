@@ -27,6 +27,8 @@ class User(Base):
     email = Column(Text)
     password = Column(Text)
     mobile_number = Column(Text)
+    name = Column(Text)
+
     verified = Column(
         Boolean(name="ck_user_verified"),
         nullable=False,
@@ -68,6 +70,7 @@ class User(Base):
             'username': self.username,
             'email': self.email,
             'mobileNumber': self.mobile_number,
+            'name': self.name,
         }
 
     def hash_password(self):
@@ -101,6 +104,7 @@ class User(Base):
             raise MissingFieldsError(User, *missing_fields)
 
         # Optional fields
+        fields['name'] = json_user.get('name')
         fields['email'] = json_user.get('email')
 
         return cls(**fields)
