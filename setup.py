@@ -20,6 +20,7 @@ requires = [
     'pyramid_redis',
     'pyramid_retry',
     'pyramid_tm',
+    'qrcode',
     'SQLAlchemy',
     'transaction',
     'zope.sqlalchemy',

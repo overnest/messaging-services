@@ -3,8 +3,16 @@ import json
 import pyramid.httpexceptions as phe
 from pyramid.response import Response
 from pyramid.view import view_config
+import qrcode
+import qrcode.image.svg
+from sqlalchemy import and_, or_
 
-from ..models import User, UserVerification
+from ..models import (
+    Friend,
+    User,
+    UserVerification,
+)
+from messaging_service.authorization import validate_user
 from messaging_service.models.errors import (
     ExpiredVerificationCodeError,
     catch_duplicate_object_errors,
@@ -14,8 +22,40 @@ from messaging_service.models.errors import (
 @view_config(route_name='users', renderer='json')
 def users(request):
     users = request.dbsession.query(User).all()
+    return {'users': [u.username for u in users]}
 
-    return {'users': users}
+
+@view_config(route_name='user_detail', renderer='json')
+def user_detail(request):
+    request_user = request.dbsession.query(User).filter(
+        User.username == request.matchdict['username']).first()
+
+    token_user = validate_user(request, query=True)
+
+    if not request_user:
+        raise phe.HTTPNotFound
+
+    if request_user.id != token_user.id:
+        friendship = request.dbsession.query(Friend).filter(
+            or_(
+                and_(
+                    Friend.target_id == request_user.id,
+                    Friend.initiator_id == token_user.id,
+                ),
+                and_(
+                    Friend.target_id == token_user.id,
+                    Friend.initiator_id == request_user.id,
+                )
+            ),
+            Friend.verified == True,  # noqa
+        ).first()
+
+        if not friendship:
+            raise phe.HTTPNotFound
+
+    # TODO right now this returns all information for the user. It will need to
+    # be somewhat limited for friends.  (Omit mobile number, etc.)
+    return {'user': request_user}
 
 
 @view_config(route_name='users', request_method='POST')
@@ -102,3 +142,19 @@ def resend_verification_code(request):
     verification.send_code(request)
 
     return Response(status=201)
+
+
+@view_config(route_name='user_qr_code', request_method='GET')
+def get_user_qr_code(request):
+    token_user = validate_user(request, query=True)
+
+    qr = qrcode.make(
+        token_user.username,
+        image_factory=qrcode.image.svg.SvgPathImage
+    )
+
+    return Response(
+        status=200,
+        body=str(qr),
+        content_type='image/svg+xml',
+    )

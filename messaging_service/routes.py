@@ -6,6 +6,8 @@ def includeme(config):
 
     # Users
     config.add_route('users', '/users')
+    config.add_route('user_detail', '/users/{username}')
+    config.add_route('user_qr_code', '/qr')
     config.add_route('authorize', '/users/{username}/authorize')
     config.add_route('resend_verification_code', '/users/{username}/resendVerificationCode')
     config.add_route('verify_user', '/users/{username}/verify')
