@@ -153,8 +153,7 @@ def get_user_qr_code(request):
         image_factory=qrcode.image.svg.SvgPathImage
     )
 
-    return Response(
-        status=200,
-        body=str(qr),
-        content_type='image/svg+xml',
-    )
+    res = Response(content_type='image/svg+xml')
+    qr.save(res.body_file)
+
+    return res
