@@ -45,7 +45,7 @@ class Upload(Base):
         )
 
     def permanent_filename(self, request):
-        return "{env_prefix}-message-{message_id}-{message_type}".format(
+        return "{env_prefix}-message-{message_id}-{message_type}.mp4".format(
             env_prefix=request.registry.settings['instance_prefix'],
             message_id=self.message.id,
             message_type=self.message.message_type,
