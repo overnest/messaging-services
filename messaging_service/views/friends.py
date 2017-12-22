@@ -63,8 +63,18 @@ def create_friend(request):
     target = request.dbsession.query(User).filter(
         User.username == request.json_body['username']).first()
 
-    friend = Friend(initiator=initiator, target=target)
-    request.dbsession.add(friend)
+    reciprocal = request.dbsession.query(Friend).filter(
+        Friend.target_id == initiator.id,
+        Friend.initiator_id == target.id,
+        Friend.verified == False,
+    ).first()
+
+    if reciprocal is not None:
+        reciprocal.verified = True
+        request.dbsession.add(reciprocal)
+    else:
+        friend = Friend(initiator=initiator, target=target)
+        request.dbsession.add(friend)
 
     return Response(status=202)
 
