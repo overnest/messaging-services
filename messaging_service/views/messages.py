@@ -1,6 +1,7 @@
 import os
 import shutil
 
+import pyramid.httpexceptions as phe
 from pyramid.response import Response
 from pyramid.view import view_config
 from sqlalchemy import and_, or_
@@ -35,6 +36,9 @@ def _verify_target_is_friend(request, to_username):
     ).filter(
         User.username == to_username
     ).first()
+
+    if friend is None:
+        raise phe.HTTPNotFound
 
     return (from_id, friend)
 
@@ -93,8 +97,15 @@ def find_upload_offset(request):
 
 @view_config(route_name='video_upload', request_method='PATCH')
 def append_to_upload(request):
-    offset_position = int(request.headers['Upload-Offset'])
-    upload_id = int(request.matchdict['upload_id'])
+    try:
+        offset_position = int(request.headers['Upload-Offset'])
+    except (KeyError, ValueError):
+        raise phe.HTTPBadRequest("Missing Upload-Offset header")
+
+    try:
+        upload_id = int(request.matchdict['upload_id'])
+    except (ValueError):
+        raise phe.HTTPNotFound
 
     upload = request.dbsession.query(Upload).get(upload_id)
 

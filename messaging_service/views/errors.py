@@ -1,4 +1,5 @@
 import json
+from json.decoder import JSONDecodeError
 
 import pyramid.httpexceptions as phe
 from pyramid.response import Response
@@ -33,6 +34,17 @@ def duplicate_entity_error(exc, request):
     )
 
 
+@exception_view_config(phe.HTTPBadRequest)
+def bad_request_error(exc, request):
+    return Response(
+        body=json.dumps({'message': str(exc)}),
+        charset="utf-8",
+        content_type="application/json",
+        status=400,
+    )
+
+
+
 @exception_view_config(phe.HTTPInternalServerError)
 def internal_server_error(exc, request):
     return Response(
@@ -50,6 +62,18 @@ def not_found_error(exc, request):
         charset="utf-8",
         content_type="application/json",
         status=404,
+    )
+
+
+@exception_view_config(JSONDecodeError)
+def json_decode_error(exc, request):
+    return Response(
+        body=json.dumps({
+            'message': "Could not decode the JSON content of the request",
+        }),
+        charset="utf-8",
+        content_type="application/json",
+        status=400,
     )
 
 

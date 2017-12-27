@@ -1,7 +1,9 @@
+import pyramid.httpexceptions as phe
 from pyramid.response import Response
 from pyramid.view import view_config
 from sqlalchemy import and_, or_
 
+from messaging_service.models.errors import DuplicateObjectError
 from ..authorization import validate_user
 from ..models import Friend
 from ..models import User
@@ -56,26 +58,53 @@ def friends(request):
     }
 
 
-@view_config(route_name='friends', request_method='POST')
+@view_config(route_name='friends', request_method='POST', renderer='json')
 def create_friend(request):
     initiator = validate_user(request, query=True)
 
     target = request.dbsession.query(User).filter(
         User.username == request.json_body['username']).first()
 
-    reciprocal = request.dbsession.query(Friend).filter(
-        Friend.target_id == initiator.id,
-        Friend.initiator_id == target.id,
-        Friend.verified == False,
-    ).first()
+    if target is None:
+        raise phe.HTTPNotFound
 
-    if reciprocal is not None:
-        reciprocal.verified = True
-        request.dbsession.add(reciprocal)
-    else:
-        friend = Friend(initiator=initiator, target=target)
-        request.dbsession.add(friend)
+    if target.id == initiator.id:
+        raise phe.HTTPBadRequest("Cannot issue a friend request to yourself.")
 
+    previous_friend_requests = request.dbsession.query(Friend).filter(
+        or_(
+            and_(
+                Friend.initiator_id == initiator.id,
+                Friend.target_id == target.id,
+            ),
+            and_(
+                Friend.target_id == initiator.id,
+                Friend.initiator_id == target.id,
+            ),
+        )
+    ).all()
+
+    friend_request_to_save = None
+
+    for friend_request in previous_friend_requests:
+        if friend_request.verified:
+            # Friendship exists and is verified.
+            return Response(status=204)
+        elif friend_request.target_id == initiator.id:
+            # Reciprocal friend request exists; verify it.
+            friend_request.verified = True
+            friend_request_to_save = friend_request
+            break
+        else:
+            raise DuplicateObjectError("friend request")
+
+    if friend_request_to_save is None:
+        friend_request_to_save = Friend(
+            initiator=initiator,
+            target=target,
+        )
+
+    request.dbsession.add(friend_request_to_save)
     return Response(status=202)
 
 
