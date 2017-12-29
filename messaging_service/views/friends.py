@@ -62,6 +62,8 @@ def friends(request):
 def create_friend(request):
     initiator = validate_user(request, query=True)
 
+    public_key = request.json_body['public_key']
+
     target = request.dbsession.query(User).filter(
         User.username == request.json_body['username']).first()
 
@@ -108,7 +110,7 @@ def create_friend(request):
     return Response(status=202)
 
 
-@view_config(route_name='respond_to_friend_request', request_method='POST')
+@view_config(route_name='friend_actions', request_method='POST')
 def confirm_friend(request):
     friend_request = (
         request.dbsession.query(Friend).join(
@@ -129,7 +131,7 @@ def confirm_friend(request):
     return Response(status=201)
 
 
-@view_config(route_name='respond_to_friend_request', request_method='DELETE')
+@view_config(route_name='friend_actions', request_method='DELETE')
 def delete_friend(request):
     friend_request = (
         request.dbsession.query(Friend).join(
@@ -144,4 +146,3 @@ def delete_friend(request):
     request.dbsession.delete(friend_request)
 
     return Response(status=204)
-

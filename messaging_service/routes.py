@@ -14,7 +14,7 @@ def includeme(config):
 
     # Friends
     config.add_route('friends', '/friends')
-    config.add_route('respond_to_friend_request', '/friends/{username}')
+    config.add_route('friend_actions', '/friends/{username}')
 
     # Messages
     config.add_route('video_upload', '/messages/video/{upload_id}')
