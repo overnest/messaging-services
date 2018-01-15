@@ -15,8 +15,16 @@ class Message(Base):
     __tablename__ = 'messages'
 
     id = Column(Integer, primary_key=True)
-    from_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    to_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    from_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    to_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     message_type = Column(Text, nullable=False)
     content = Column(Text)
     read = Column(Boolean(name="ck_message_read"), nullable=False, default=False)

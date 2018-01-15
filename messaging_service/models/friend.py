@@ -15,13 +15,13 @@ class Friend(Base):
 
     initiator_id = Column(
         Integer,
-        ForeignKey("users.id"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         primary_key=True,
     )
     target_id = Column(
         Integer,
-        ForeignKey("users.id"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         primary_key=True,
     )

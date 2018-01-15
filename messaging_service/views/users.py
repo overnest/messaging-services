@@ -58,6 +58,20 @@ def user_detail(request):
     return {'user': request_user}
 
 
+@view_config(route_name='user_detail', request_method='DELETE')
+def delete_user(request):
+    request_user = request.dbsession.query(User).filter(
+        User.username == request.matchdict['username']).first()
+
+    token_user_id = validate_user(request)
+
+    if request_user.id == token_user_id:
+        request.dbsession.delete(request_user)
+        return Response(status=204)
+    else:
+        return Response(status=403)
+
+
 @view_config(route_name='users', request_method='POST')
 def create_user(request):
     user = User.from_json(request.json_body)

@@ -22,7 +22,11 @@ class Upload(Base):
     __tablename__ = 'uploads'
 
     id = Column(Integer, primary_key=True)
-    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    message_id = Column(
+        Integer,
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=False
+    )
     total_size = Column(Integer, nullable=False)
     uploaded_size = Column(Integer, nullable=False, default=0)
     complete = Column(

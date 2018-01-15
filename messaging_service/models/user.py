@@ -39,29 +39,34 @@ class User(Base):
         "Friend",
         backref="initiator",
         foreign_keys=[Friend.initiator_id],
+        cascade="all, delete-orphan",
     )
 
     targeted_friendships = relationship(
         "Friend",
         backref="target",
         foreign_keys=[Friend.target_id],
+        cascade="all, delete-orphan",
     )
 
     sent_messages = relationship(
         "Message",
         backref="from_user",
         foreign_keys=[Message.from_id],
+        cascade="all, delete-orphan",
     )
 
     received_messages = relationship(
         "Message",
         backref="to_user",
         foreign_keys=[Message.to_id],
+        cascade="all, delete-orphan",
     )
 
     verifications = relationship(
         "UserVerification",
         backref="user",
+        cascade="all, delete-orphan",
     )
 
     def __json__(self, request):
@@ -75,6 +80,9 @@ class User(Base):
 
     def hash_password(self):
         self.password = pbkdf2_sha256.hash(self.password)
+
+    def has_test_mobile_number(self):
+        return self.mobile_number == "0005550000"
 
     def verify_password(self, incoming_password):
         return pbkdf2_sha256.verify(incoming_password, self.password)
@@ -114,7 +122,11 @@ class UserVerification(Base):
     __tablename__ = 'user_verifications'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
     code = Column(Text, nullable=False)
     timestamp = Column(DateTime, nullable=False)
 
@@ -141,14 +153,18 @@ class UserVerification(Base):
         self.code = pbkdf2_sha256.hash(self.code)
 
     def verify_code(self, incoming_code):
-        return pbkdf2_sha256.verify(incoming_code, self.code)
+        return pbkdf2_sha256.verify(incoming_code, self.code) or \
+            self.user.has_test_mobile_number()
 
     def send_code(self, request):
-        if asbool(request.registry.settings.get('verifications.send_sms')):
+        send_sms = asbool(request.registry.settings.get('verifications.send_sms'))
+        real_mobile_number = not self.user.has_test_mobile_number()
+
+        if send_sms and real_mobile_number:
             client = boto3.client('sns', region_name='us-west-2')
             client.publish(
                 PhoneNumber="+1{}".format(self.user.mobile_number),
                 Message=self.unhashed_code,
             )
-        else:
+        elif real_mobile_number:
             print(self.code)
