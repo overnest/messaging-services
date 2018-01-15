@@ -1,10 +1,12 @@
-from sqlalchemy import(
+from datetime import datetime
+
+from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     ForeignKey,
     Integer,
     Text,
-    TIMESTAMP,
 )
 from sqlalchemy.orm import relationship
 
@@ -28,7 +30,7 @@ class Message(Base):
     message_type = Column(Text, nullable=False)
     content = Column(Text)
     read = Column(Boolean(name="ck_message_read"), nullable=False, default=False)
-    sent = Column(TIMESTAMP)
+    timestamp = Column(DateTime, default=datetime.utcnow)
 
     upload = relationship("Upload", uselist=False, back_populates="message")
 
@@ -37,12 +39,13 @@ class Message(Base):
             return {
                 'type': "text",
                 'content': self.content,
-                'sent': self.sent,
+                'timestamp': self.sent.isoformat(),
                 'from': self.from_user.username,
             }
         elif self.message_type == 'video':
             return {
                 'type': "video",
                 'contentLink': self.upload.link(request),
+                'timestamp': self.sent.isoformat(),
                 'from': self.from_user.username,
             }
