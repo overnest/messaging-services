@@ -32,7 +32,12 @@ class Message(Base):
     read = Column(Boolean(name="ck_message_read"), nullable=False, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
-    upload = relationship("Upload", uselist=False, back_populates="message")
+    upload = relationship(
+        "Upload",
+        uselist=False,
+        back_populates="message",
+        cascade="all, delete-orphan",
+    )
 
     def __json__(self, request):
         if self.message_type == 'text':
