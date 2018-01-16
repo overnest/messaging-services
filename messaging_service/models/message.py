@@ -39,13 +39,13 @@ class Message(Base):
             return {
                 'type': "text",
                 'content': self.content,
-                'timestamp': self.sent.isoformat(),
+                'timestamp': self.timestamp.isoformat(),
                 'from': self.from_user.username,
             }
         elif self.message_type == 'video':
             return {
                 'type': "video",
                 'contentLink': self.upload.link(request),
-                'timestamp': self.sent.isoformat(),
+                'timestamp': self.timestamp.isoformat(),
                 'from': self.from_user.username,
             }
