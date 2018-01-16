@@ -172,16 +172,68 @@ def confirm_friend(request):
 
 @view_config(route_name='friend_actions', request_method='DELETE')
 def delete_friend(request):
-    friend_request = (
-        request.dbsession.query(Friend).join(
-            User,
-            User.id == Friend.initiator_id
-        ).filter(
-            User.username == request.matchdict['username'],
-            Friend.target_id == validate_user(request)
-        ).first()
-    )
+    current_user_id = validate_user(request)
+    other_user = request.dbsession.query(User).filter(
+        User.username == request.matchdict['username']
+    ).first()
+
+    if other_user is None:
+        return Response(status=404)
+
+    other_user_id = other_user.id
+
+    friend_request = request.dbsession.query(Friend).filter(
+        or_(
+            and_(
+                Friend.initiator_id == other_user_id,
+                Friend.target_id == current_user_id,
+            ),
+            and_(
+                Friend.initiator_id == current_user_id,
+                Friend.target_id == other_user_id,
+            ),
+        )
+    ).first()
+
+    if friend_request is None:
+        return Response(status=404)
 
     request.dbsession.delete(friend_request)
+
+    return Response(status=204)
+
+
+@view_config(route_name='friend_actions', request_method='PUT')
+def update_key(request):
+    current_user_id = validate_user(request)
+    other_user = request.dbsession.query(User).filter(
+        User.username == request.matchdict['username']
+    ).first()
+
+    if other_user is None:
+        return Response(status=404)
+
+    other_user_id = other_user.id
+
+    friend_request = request.dbsession.query(Friend).filter(
+        or_(
+            and_(
+                Friend.initiator_id == other_user_id,
+                Friend.target_id == current_user_id,
+            ),
+            and_(
+                Friend.initiator_id == current_user_id,
+                Friend.target_id == other_user_id,
+            ),
+        )
+    ).first()
+
+    if friend_request is None:
+        return Response(status=404)
+
+    public_key = request.json_body.get('public_key')
+
+    friend_request.set_key_for(current_user_id, public_key)
+    request.dbsession.add(friend_request)
 
     return Response(status=204)

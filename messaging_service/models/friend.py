@@ -41,7 +41,7 @@ class Friend(Base):
         other_user = None
 
         if self.initiator_id == user_id:
-           other_user = self.target
+            other_user = self.target
 
         if self.target_id == user_id:
             other_user = self.initiator
@@ -54,7 +54,6 @@ class Friend(Base):
 
         return other_user
 
-
     def key_for(self, user_id):
         """Given a ``User``, return the ``*_public_key`` associated with them
         for this friendship.
@@ -64,3 +63,14 @@ class Friend(Base):
 
         if user_id == self.target_id:
             return self.target_public_key
+
+    def set_key_for(self, user_id, key_value):
+        """Given a ``user_id`` and a public key value, update the public key
+        for that user to match the new value.
+        """
+        if user_id == self.initiator_id:
+            self.initiator_public_key = key_value
+        elif user_id == self.target_id:
+            self.target_public_key = key_value
+        else:
+            raise ValueError("Provided user_id does not belong to this friendhsip.")
