@@ -40,7 +40,10 @@ class Upload(Base):
         default=False,
     )
 
-    message = relationship("Message", back_populates="upload")
+    message = relationship(
+        "Message",
+        back_populates="upload"
+    )
 
     def partial_filename(self, request):
         return os.path.join(
